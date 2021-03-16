@@ -14,12 +14,12 @@ class FileErrorWriter(path: String) : IErrorWriter {
     private var fileWriter = FileWriter(path, true)
 
     override fun write(msg: String) {
-        val errorLine = "error: $msg"
+        val errorLine = "[error] $msg"
         fileWriter.appendLine(errorLine)
     }
 
     override fun write(msg: String, line: Int, column: Int) {
-        val errorLine = "error: $msg (line: $line) (column: $column)"
+        val errorLine = "[error] $msg (line: $line, column: $column)"
         fileWriter.appendLine(errorLine)
     }
 

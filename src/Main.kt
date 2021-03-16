@@ -30,7 +30,7 @@ fun testScanner(testFileName: String, outputFileName: String, errorsFileName: St
             val (_, image, line, column) = lexeme
             val sub = srcLines[line-1].substring(column-1, column - 1 + image.length)
             if(lexeme.image != sub) {
-                println(lexeme)
+                println("wrong lexeme position $lexeme")
             }
         }
 
@@ -45,5 +45,5 @@ fun testScanner(testFileName: String, outputFileName: String, errorsFileName: St
 }
 
 fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
-    testScanner("good_test.cpp", "lexemes.log","errors.log")
+    testScanner("scanner_test.cpp", "lexemes.log","errors.log")
 }

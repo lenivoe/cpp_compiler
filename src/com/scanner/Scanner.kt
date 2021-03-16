@@ -23,6 +23,10 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
         if (src.length > maxSourceLength) {
             throw CommonException("source text is too long")
         }
+
+        assert(src.substring(src.length - 2).all { it == SpecChars.fileEnd }) {
+            "source must have '\\0\\0' at the end"
+        }
     }
 
     @Suppress("unused")
@@ -71,6 +75,9 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
                             scanPos.increaseColumn()
                         }
                     } else if (nextChar == '*') { // обработка многострочного комментария
+                        // на случай незакрытого комментария в конце файла
+                        val commentBegin = scanPos.clone()
+
                         scanPos.increaseColumn(2)
                         while (char != SpecChars.fileEnd && !(char == '*' && nextChar == '/')) {
                             if (char == '\n') {
@@ -80,13 +87,9 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
                             }
                         }
 
-                        assert(src.last() == SpecChars.fileEnd && src.last() == src[src.length - 2]) {
-                            "source must have '\\0\\0' at the end"
-                        }
-
                         if (nextChar == SpecChars.fileEnd) {
-                            errorWriter.write("unclosed multiline comment", scanPos.line, scanPos.column)
-                            return Lexeme(LexemeType.ERROR, "/*", scanPos.line, scanPos.column)
+                            errorWriter.write("unclosed multiline comment", commentBegin.line, commentBegin.column)
+                            return Lexeme(LexemeType.ERROR, "/*", commentBegin.line, commentBegin.column)
                         } else {
                             scanPos.increaseColumn(2)
                         }
@@ -132,16 +135,22 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
     }
 
     private inline fun getNumericLexeme(): Lexeme? {
-        if (!char.isDigit()) {
+        if (!isDecimal(char)) {
             return null
         }
 
-        val lexBegin = scanPos.position
+        val numberBegin = scanPos.clone()
 
         var type = if (char == '0') {
             if(nextChar == 'x' || nextChar == 'X') {
                 scanPos.increaseColumn(2)
-                LexemeType.CONST16
+                if (isHex(char)) {
+                    LexemeType.CONST16
+                } else {
+                    errorWriter.write("invalid digit '$char' in hex constant",
+                        numberBegin.line, numberBegin.column)
+                    LexemeType.ERROR
+                }
             } else {
                 scanPos.increaseColumn()
                 LexemeType.CONST8
@@ -150,25 +159,33 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
             LexemeType.CONST10
         }
 
-        // способ проверки цифры в зависимости от предварительного типа лексемы
-        val checkDigit: (Char) -> Boolean = when (type) {
-            LexemeType.CONST8 -> { ch -> ch in '0'..'7' }
-            LexemeType.CONST10 -> Char::isDigit
-            LexemeType.CONST16 -> { ch -> ch.isDigit() || ch in 'a'..'f' || ch in 'A'..'F' }
-            else -> throw Exception("unreachable code")
+        val scanNumber = { isRightDigit: (Char) -> Boolean ->
+            while (isRightDigit(char) && (scanPos.position - numberBegin.position <= maxLexemeLength)) {
+                scanPos.increaseColumn()
+            }
         }
 
-        while(checkDigit(char) && (scanPos.position - lexBegin <= maxLexemeLength)) {
-            scanPos.increaseColumn()
+        when (type) {
+            LexemeType.CONST8 -> {
+                scanNumber(::isOctal)
+                if (char in '8'..'9') {
+                    errorWriter.write("invalid digit '$char' in octal constant",
+                        numberBegin.line, numberBegin.column)
+                    type = LexemeType.ERROR
+                }
+            }
+            LexemeType.CONST10 -> scanNumber(::isDecimal)
+            LexemeType.CONST16 -> scanNumber(::isHex)
+            else -> Unit // иначе ничего не происходит
         }
 
-        val image = src.substring(lexBegin, scanPos.position)
+        val image = src.substring(numberBegin.position, scanPos.position)
         if (image.length > maxLexemeLength) {
-            errorWriter.write("too long lexeme", scanPos.line, scanPos.column - image.length)
+            errorWriter.write("too long lexeme", numberBegin.line, numberBegin.column)
             type = LexemeType.ERROR
         }
 
-        return Lexeme(type, image, scanPos.line, scanPos.column - image.length)
+        return Lexeme(type, image, numberBegin.line, numberBegin.column)
     }
 
     private inline fun getSymbolLexeme(): Lexeme? {
@@ -226,7 +243,7 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
                 else LexemeType.PLUS
             }
             '-' -> {
-                if (nextChar == '+') {
+                if (nextChar == '-') {
                     image += "$nextChar"
                     LexemeType.DECREMENT
                 }
@@ -256,3 +273,13 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
         return lexeme
     }
 }
+
+
+private inline fun isOctal(ch: Char): Boolean
+    = ch in '0'..'7'
+
+private inline fun isDecimal(ch: Char): Boolean
+    = ch.isDigit()
+
+private inline fun isHex(ch: Char): Boolean
+    = isDecimal(ch) || ch in 'a'..'f' || ch in 'A'..'F'
