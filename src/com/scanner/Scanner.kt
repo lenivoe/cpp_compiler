@@ -29,7 +29,6 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
         }
     }
 
-    @Suppress("unused")
     fun savePosition(): ScannerPosition {
         return scanPos.clone()
     }
@@ -76,7 +75,7 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
                         }
                     } else if (nextChar == '*') { // обработка многострочного комментария
                         // на случай незакрытого комментария в конце файла
-                        val commentBegin = scanPos.clone()
+                        val commentBegin = savePosition()
 
                         scanPos.increaseColumn(2)
                         while (char != SpecChars.fileEnd && !(char == '*' && nextChar == '/')) {
@@ -139,7 +138,7 @@ class Scanner(private val src: String, private val errorWriter: IErrorWriter) {
             return null
         }
 
-        val numberBegin = scanPos.clone()
+        val numberBegin = savePosition()
 
         var type = if (char == '0') {
             if(nextChar == 'x' || nextChar == 'X') {
