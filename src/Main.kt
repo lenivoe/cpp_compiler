@@ -63,8 +63,12 @@ fun testParser(testFileName: String, errorsFileName: String) {
 }
 
 fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
-    testScanner("test_data/lexer_test_no_errors.cpp", "tokens_no_errors.log", "lexer_no_errors.log")
-    testScanner("test_data/lexer_test_with_errors.cpp", "tokens_with_errors.log", "lexer_with_errors.log")
+    testScanner("test_data/lexer_test_no_errors.cpp",
+        "tokens_no_errors.log",
+        "lexer_no_errors.log")
+    testScanner("test_data/lexer_test_with_errors.cpp",
+        "tokens_with_errors.log",
+        "lexer_with_errors.log")
 
     testParser("test_data/parser_test_no_errors.cpp", "parser_no_errors.log")
     testParser("test_data/parser_test_with_error1.cpp", "parser_error1.log")
