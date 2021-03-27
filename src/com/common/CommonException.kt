@@ -1,3 +1,3 @@
 package com.common
 
-class CommonException(msg: String) : Exception(msg)
+open class CommonException(msg: String) : Exception(msg)

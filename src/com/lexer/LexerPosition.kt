@@ -1,6 +1,6 @@
-package com.scanner
+package com.lexer
 
-class ScannerPosition(position: Int = 0, line: Int = 1, column: Int = 1) {
+class LexerPosition(position: Int = 0, line: Int = 1, column: Int = 1) {
     var position: Int = position
         private set
 
@@ -10,7 +10,7 @@ class ScannerPosition(position: Int = 0, line: Int = 1, column: Int = 1) {
     var column: Int = column
         private set
 
-    fun clone() = ScannerPosition(position, line, column)
+    fun clone() = LexerPosition(position, line, column)
 
     fun increaseLine(additive: Int = 1) {
         column = 1
